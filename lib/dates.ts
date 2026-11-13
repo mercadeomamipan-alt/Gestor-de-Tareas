@@ -80,3 +80,36 @@ export function dueInfo(iso: string | null, today = todayISO()): DueInfo {
   if (n <= 7) return { text: `${fmtDay(iso)} · en ${n} d`, tone: "soon" };
   return { text: `${fmtDay(iso)} · sem ${isoWeek(iso)}`, tone: "" };
 }
+
+// ---------- Calendario (semanas de lunes a domingo) ----------
+
+/** 0 = lunes … 6 = domingo */
+export function weekdayIndex(iso: string): number {
+  return (new Date(toUTC(iso)).getUTCDay() + 6) % 7;
+}
+
+export function startOfWeek(iso: string): string {
+  return addDays(iso, -weekdayIndex(iso));
+}
+
+export function startOfMonth(iso: string): string {
+  return iso.slice(0, 8) + "01";
+}
+
+export function endOfMonth(iso: string): string {
+  return addDays(addMonths(startOfMonth(iso), 1), -1);
+}
+
+export function isValidISO(s: string | undefined | null): s is string {
+  return !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(toUTC(s));
+}
+
+const fmt = (iso: string, opts: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", ...opts }).format(new Date(toUTC(iso)));
+
+/** "noviembre de 2026" */
+export const fmtMonthYear = (iso: string) => fmt(iso, { month: "long", year: "numeric" });
+/** "lunes 16 de noviembre" */
+export const fmtLongDay = (iso: string) => fmt(iso, { weekday: "long", day: "numeric", month: "long" });
+/** "lun" */
+export const fmtWeekdayShort = (iso: string) => fmt(iso, { weekday: "short" }).replace(/\./g, "");

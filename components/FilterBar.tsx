@@ -4,7 +4,15 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { STATUS } from "@/lib/types";
 
-export function FilterBar({ projects }: { projects: string[] }) {
+export function FilterBar({
+  projects,
+  showStatus = true,
+  showSearch = true,
+}: {
+  projects: string[];
+  showStatus?: boolean;
+  showSearch?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -55,6 +63,7 @@ export function FilterBar({ projects }: { projects: string[] }) {
           </a>
         ))}
       </div>
+      {showStatus && (
       <select
         id="f-estado"
         aria-label="Estado"
@@ -67,6 +76,7 @@ export function FilterBar({ projects }: { projects: string[] }) {
           <option key={k} value={k}>{v}</option>
         ))}
       </select>
+      )}
       {projects.length > 0 && (
         <select
           id="f-proyecto"
@@ -80,7 +90,9 @@ export function FilterBar({ projects }: { projects: string[] }) {
           ))}
         </select>
       )}
-      <input id="f-q" type="search" placeholder="Buscar tarea…" aria-label="Buscar" value={q} onChange={(e) => setQ(e.target.value)} />
+      {showSearch && (
+        <input id="f-q" type="search" placeholder="Buscar tarea…" aria-label="Buscar" value={q} onChange={(e) => setQ(e.target.value)} />
+      )}
     </div>
   );
 }

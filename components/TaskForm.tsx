@@ -74,7 +74,7 @@ export function TaskForm({ mode, action, people, meId, projects, task }: Props) 
         </div>
       </div>
 
-      <div className="grid4">
+      <div className="grid3">
         <div className="field">
           <label htmlFor="start_date">Fecha de inicio</label>
           <input id="start_date" name="start_date" type="date" defaultValue={task?.start_date ?? ""} />
@@ -90,10 +90,6 @@ export function TaskForm({ mode, action, people, meId, projects, task }: Props) 
               <option key={k} value={k}>{v}</option>
             ))}
           </select>
-        </div>
-        <div className="field">
-          <label htmlFor="estimated_hours">Horas estimadas</label>
-          <input id="estimated_hours" name="estimated_hours" type="number" min="0" step="0.5" inputMode="decimal" defaultValue={task?.estimated_hours ?? ""} placeholder="—" />
         </div>
       </div>
 

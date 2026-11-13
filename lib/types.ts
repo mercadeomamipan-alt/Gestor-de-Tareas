@@ -17,7 +17,8 @@ export type Recurrence = keyof typeof RECURRENCE;
 export const CLOSED: Status[] = ["hecha", "cancelada"];
 export const isOpen = (s: Status) => !CLOSED.includes(s);
 
-export type Profile = { id: string; email: string; full_name: string };
+/** hue: tono de color asignado a la persona (distinto para cada miembro del equipo). */
+export type Profile = { id: string; email: string; full_name: string; hue?: number };
 
 export type Task = {
   id: string;

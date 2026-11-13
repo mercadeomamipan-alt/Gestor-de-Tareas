@@ -294,10 +294,6 @@ export default async function TaskPage({
                   </div>
                 )}
                 <div>
-                  <dt>Horas estimadas</dt>
-                  <dd>{task.estimated_hours != null ? `${Number(task.estimated_hours)} h` : "—"}</dd>
-                </div>
-                <div>
                   <dt>Repetición</dt>
                   <dd>{RECURRENCE[task.recurrence]}</dd>
                 </div>

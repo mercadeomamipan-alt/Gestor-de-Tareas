@@ -18,8 +18,6 @@ const dateOrNull = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
 function parseTaskFields(fd: FormData) {
   const priority = str(fd, "priority") as Priority;
   const recurrence = str(fd, "recurrence") as Recurrence;
-  const hoursRaw = str(fd, "estimated_hours").replace(",", ".");
-  const hours = hoursRaw === "" ? null : Number(hoursRaw);
   return {
     title: str(fd, "title"),
     description: str(fd, "description"),
@@ -28,7 +26,6 @@ function parseTaskFields(fd: FormData) {
     recurrence: recurrence in RECURRENCE ? recurrence : "ninguna",
     start_date: dateOrNull(str(fd, "start_date")),
     due_date: dateOrNull(str(fd, "due_date")),
-    estimated_hours: hours !== null && Number.isFinite(hours) && hours >= 0 ? hours : null,
     assigned_by: str(fd, "assigned_by"),
     assignees: [...new Set(fd.getAll("assignees").map(String).filter(Boolean))],
   };
@@ -92,7 +89,6 @@ async function spawnNextOccurrence(supabase: Supa, task: Task & { assignees: str
       recurrence_from: task.id,
       start_date: shift(task.start_date),
       due_date: shift(task.due_date),
-      estimated_hours: task.estimated_hours,
       assigned_by: task.assigned_by,
       created_by: actorId,
       updated_by: actorId,
@@ -130,7 +126,6 @@ export async function createTask(_prev: FormState, fd: FormData): Promise<FormSt
       recurrence: f.recurrence,
       start_date: f.start_date,
       due_date: f.due_date,
-      estimated_hours: f.estimated_hours,
       assigned_by: f.assigned_by || me.id,
       created_by: me.id,
       updated_by: me.id,
@@ -199,7 +194,6 @@ export async function updateTask(_prev: FormState, fd: FormData): Promise<FormSt
       recurrence: f.recurrence,
       start_date: f.start_date,
       due_date: f.due_date,
-      estimated_hours: f.estimated_hours,
       assigned_by: f.assigned_by || before.assigned_by,
       updated_by: me.id,
       updated_at: new Date().toISOString(),
@@ -261,6 +255,59 @@ export async function updateTask(_prev: FormState, fd: FormData): Promise<FormSt
   revalidatePath("/");
   revalidatePath(`/tareas/${id}`);
   redirect(`/tareas/${id}`);
+}
+
+/** Cambia solo la fecha de entrega (desde el calendario). Exige motivo si ya tenía fecha. */
+export async function rescheduleTask(_prev: FormState, fd: FormData): Promise<FormState & { ok?: boolean }> {
+  const { supabase, me } = await requireUser();
+  const id = str(fd, "id");
+  const newDate = dateOrNull(str(fd, "due_date"));
+  const reason = str(fd, "reason");
+  if (!newDate) return { error: "Fecha no válida." };
+  const before = await getTask(supabase, id);
+  if (!before) return { error: "Esta tarea ya no existe." };
+  if (before.due_date === newDate) return { ok: true };
+  if (before.due_date && !reason) return { error: "Escribe el motivo del cambio de fecha." };
+  if (before.start_date && before.start_date > newDate)
+    return { error: "La nueva entrega quedaría antes de la fecha de inicio. Cambia primero la fecha de inicio." };
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({ due_date: newDate, updated_by: me.id, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: "No se pudo mover la tarea. " + error.message };
+  await supabase.from("due_date_changes").insert({
+    task_id: id,
+    old_date: before.due_date,
+    new_date: newDate,
+    reason,
+    changed_by: me.id,
+  });
+
+  const recipients = [...new Set([...before.assignees, before.assigned_by])].filter((u) => u !== me.id);
+  if (recipients.length) {
+    const profiles = await getProfiles(supabase);
+    const actor = displayName(profiles[me.id]);
+    notifyLater(async () => {
+      const from = before.due_date ? fmtDate(before.due_date) : "sin fecha";
+      const to = fmtDate(newDate);
+      await sendMail(
+        emailsOf(recipients, profiles),
+        `Cambió la fecha de entrega: ${before.title}`,
+        layout({
+          heading: `Nueva fecha de entrega: ${to}`,
+          intro: `${actor} movió la entrega de “${before.title}” del ${from} al ${to}.`,
+          bodyHtml: reason ? `<p style="margin:0"><span style="color:#5d6879">Motivo:</span> ${esc(reason)}</p>` : "",
+          cta: { label: "Ver la tarea", href: link(id) },
+        }),
+      );
+    });
+  }
+
+  revalidatePath("/");
+  revalidatePath("/calendario");
+  revalidatePath(`/tareas/${id}`);
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------- estado y aprobación

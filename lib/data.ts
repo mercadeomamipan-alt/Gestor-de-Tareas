@@ -2,6 +2,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Task, TaskListItem } from "@/lib/types";
+import { PERSON_HUES } from "@/lib/people";
 
 /** Persona con sesión iniciada y su perfil. Redirige a /login si no hay sesión. */
 export async function requireUser() {
@@ -10,16 +11,19 @@ export async function requireUser() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  const { data: profile } = await supabase.from("profiles").select("id, email, full_name").eq("id", user.id).single();
-  const me: Profile = profile ?? { id: user.id, email: user.email ?? "", full_name: user.email ?? "" };
+  const profiles = await getProfiles(supabase);
+  const me: Profile = profiles[user.id] ?? { id: user.id, email: user.email ?? "", full_name: user.email ?? "" };
   return { supabase, me };
 }
 
 export type Supa = Awaited<ReturnType<typeof createClient>>;
 
 export async function getProfiles(supabase: Supa): Promise<Record<string, Profile>> {
-  const { data } = await supabase.from("profiles").select("id, email, full_name").order("full_name");
-  return Object.fromEntries((data ?? []).map((p) => [p.id, p as Profile]));
+  const { data } = await supabase.from("profiles").select("id, email, full_name, created_at").order("created_at").order("id");
+  // Cada persona recibe un color distinto según su orden de llegada al equipo
+  return Object.fromEntries(
+    (data ?? []).map(({ created_at: _c, ...p }, i) => [p.id, { ...p, hue: PERSON_HUES[i % PERSON_HUES.length] } as Profile]),
+  );
 }
 
 type Row = Task & {
