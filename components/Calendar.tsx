@@ -190,7 +190,7 @@ export function Calendar(props: Props) {
       )}
 
       {view === "mes" && (
-        <div className="month" role="grid" aria-label={title}>
+        <div className="cal-month" role="grid" aria-label={title}>
           {WEEKDAYS.map((w) => (
             <div key={w} className="month-wd" role="columnheader">{w}</div>
           ))}
@@ -231,7 +231,7 @@ export function Calendar(props: Props) {
       )}
 
       {view === "semana" && (
-        <div className="week">
+        <div className="cal-week">
           {days.map((d) => {
             const list = byDate[d] ?? [];
             const n = openCount(d);
