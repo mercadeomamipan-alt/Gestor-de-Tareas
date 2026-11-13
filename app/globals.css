@@ -283,6 +283,7 @@ button { cursor: pointer; }
 
 .status-form { display: grid; gap: 10px; }
 .status-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.status-buttons form { margin: 0; }
 .status-buttons button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; }
 .status-buttons button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 
@@ -318,9 +319,8 @@ details.add[open] summary { margin-bottom: 12px; }
 .timeline p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .timeline .unread { border-left: 3px solid var(--accent); padding-left: 10px; }
 .history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; }
-.history li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; }
-.history .when { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 12px; padding-top: 2px; }
-@media (max-width: 460px) { .history li { grid-template-columns: 1fr; gap: 0; } }
+.history li { display: grid; gap: 1px; }
+.history .when { color: var(--muted); font-family: var(--font-mono), monospace; font-size: 11.5px; }
 
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }

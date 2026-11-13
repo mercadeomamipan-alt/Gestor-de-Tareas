@@ -1,8 +1,8 @@
 import type { Profile } from "@/lib/types";
 
-export function displayName(p: Profile | undefined, meId?: string): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function displayName(p: Profile | undefined, _meId?: string): string {
   if (!p) return "Alguien";
-  if (meId && p.id === meId) return "Tú";
   return p.full_name || p.email.split("@")[0];
 }
 

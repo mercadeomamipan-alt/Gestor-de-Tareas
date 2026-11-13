@@ -139,7 +139,9 @@ export default async function TaskPage({
             <span className={`prio prio-${task.priority}`}>Prioridad {PRIORITY[task.priority].toLowerCase()}</span>
             {task.assignees.length > 1 && <span className="tag shared">Compartida</span>}
             {task.project && <span className="tag project">{task.project}</span>}
-            <span className={`due ${open ? d.tone : ""}`}>{d.text}</span>
+            <span className={`due ${open ? d.tone : ""}`}>
+              {open ? d.text : task.due_date ? `Entrega ${fmtDate(task.due_date)}` : "Sin fecha"}
+            </span>
           </div>
           <div className="actions">
             <Link href={`/tareas/${id}?editar=1`} className="btn">Editar</Link>
@@ -166,7 +168,7 @@ export default async function TaskPage({
           <div className="callout done">
             <p>
               <b>Hecha</b>
-              {task.closed_at && <> el {fmtStamp(task.closed_at)}</>}
+              {task.closed_at && <> · {fmtStamp(task.closed_at)}</>}
               {task.approved_by && <> · aprobada por {name(task.approved_by)}</>}
               {task.due_date && task.closed_at && (
                 <> · {task.closed_at.slice(0, 10) <= task.due_date ? "a tiempo" : "después de la fecha de entrega"}</>

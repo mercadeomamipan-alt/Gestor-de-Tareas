@@ -4,12 +4,17 @@ import nodemailer from "nodemailer";
 let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
 function getTransporter() {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) return null;
+  if (!process.env.GMAIL_USER) return null;
   if (!transporter) {
-    transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD.replace(/\s/g, "") },
-    });
+    // SMTP_HOST es opcional: solo para pruebas con un servidor de correo local.
+    transporter = process.env.SMTP_HOST
+      ? nodemailer.createTransport({ host: process.env.SMTP_HOST, port: Number(process.env.SMTP_PORT || 1025), secure: false })
+      : process.env.GMAIL_APP_PASSWORD
+        ? nodemailer.createTransport({
+            service: "gmail",
+            auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD.replace(/\s/g, "") },
+          })
+        : null;
   }
   return transporter;
 }

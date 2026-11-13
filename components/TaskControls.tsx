@@ -28,46 +28,48 @@ export function StatusControl({
   blockedReason: string;
 }) {
   const [state, action] = useActionState(changeStatus, undefined);
-  const [picked, setPicked] = useState<Status | null>(null);
+  const [blocking, setBlocking] = useState(false);
   const options: Status[] = ["pendiente", "en_curso", "bloqueada", isAssigner ? "hecha" : "en_revision", "cancelada"];
   const label = (s: Status) => (s === "en_revision" && !isAssigner ? "Terminé: enviar a revisión" : STATUS[s]);
 
   return (
-    <form action={action} className="status-form">
-      <input type="hidden" name="id" value={taskId} />
+    <div className="status-form">
       <div className="status-buttons" role="group" aria-label="Cambiar estado">
-        {options.map((s) => (
-          <button
-            key={s}
-            type={s === "bloqueada" ? "button" : "submit"}
-            name="status"
-            value={s}
-            aria-pressed={current === s}
-            formNoValidate
-            onClick={() => setPicked(s === "bloqueada" ? "bloqueada" : null)}
-          >
-            {label(s)}
-          </button>
-        ))}
+        {options.map((s) =>
+          s === "bloqueada" ? (
+            <button key={s} type="button" aria-pressed={current === s} onClick={() => setBlocking(true)}>
+              {label(s)}
+            </button>
+          ) : (
+            <form key={s} action={action}>
+              <input type="hidden" name="id" value={taskId} />
+              <input type="hidden" name="status" value={s} />
+              <button type="submit" aria-pressed={current === s} onClick={() => setBlocking(false)}>
+                {label(s)}
+              </button>
+            </form>
+          ),
+        )}
       </div>
-      {(picked === "bloqueada") && (
-        <div className="addrow">
+      {blocking && (
+        <form action={action} className="addrow">
+          <input type="hidden" name="id" value={taskId} />
+          <input type="hidden" name="status" value="bloqueada" />
           <input
             className="input"
             name="blocked_reason"
             placeholder="¿Qué la bloquea o de quién depende?"
             defaultValue={blockedReason}
+            aria-label="Motivo del bloqueo"
             required
             autoFocus
           />
-          <SubmitButton className="btn" name="status" value="bloqueada" pendingText="…">Marcar bloqueada</SubmitButton>
-        </div>
+          <SubmitButton className="btn" pendingText="…">Marcar bloqueada</SubmitButton>
+        </form>
       )}
-      {!isAssigner && (
-        <p className="hint">Quien asignó la tarea la aprueba antes de quedar como hecha.</p>
-      )}
+      {!isAssigner && <p className="hint">Quien asignó la tarea la aprueba antes de quedar como hecha.</p>}
       {state?.error && <p className="form-error" role="alert">{state.error}</p>}
-    </form>
+    </div>
   );
 }
 
@@ -79,10 +81,10 @@ export function ReviewControl({ taskId }: { taskId: string }) {
   return (
     <form action={action} style={{ display: "grid", gap: 10 }}>
       <input type="hidden" name="id" value={taskId} />
+      <input type="hidden" name="decision" value={returning ? "devolver" : "aprobar"} />
       {returning ? (
         <>
-          <input type="hidden" name="decision" value="devolver" />
-          <textarea className="input" name="reason" placeholder="¿Qué falta o qué hay que corregir?" required autoFocus rows={3} />
+          <textarea className="input" name="reason" placeholder="¿Qué falta o qué hay que corregir?" aria-label="Qué falta" required autoFocus rows={3} />
           <div className="row-actions">
             <SubmitButton className="btn danger solid" pendingText="Devolviendo…">Devolver tarea</SubmitButton>
             <button type="button" className="btn ghost" onClick={() => setReturning(false)}>Cancelar</button>
@@ -90,9 +92,9 @@ export function ReviewControl({ taskId }: { taskId: string }) {
         </>
       ) : (
         <>
-          <input className="input" name="reason" placeholder="Comentario (opcional)" />
+          <input className="input" name="reason" placeholder="Comentario (opcional)" aria-label="Comentario" />
           <div className="row-actions">
-            <SubmitButton className="btn ok" name="decision" value="aprobar" pendingText="Aprobando…">Aprobar</SubmitButton>
+            <SubmitButton className="btn ok" pendingText="Aprobando…">Aprobar</SubmitButton>
             <button type="button" className="btn" onClick={() => setReturning(true)}>Devolver con comentarios</button>
           </div>
         </>
@@ -164,7 +166,7 @@ export function AttachmentForms({ taskId }: { taskId: string }) {
           <input type="hidden" name="task_id" value={taskId} />
           <div className="field">
             <label htmlFor="link-url">Enlace</label>
-            <input id="link-url" name="url" type="url" inputMode="url" placeholder="https://drive.google.com/…" required className="input" />
+            <input id="link-url" name="url" type="text" inputMode="url" autoComplete="url" placeholder="https://drive.google.com/…" required className="input" />
           </div>
           <div className="addrow">
             <input name="name" type="text" placeholder="Nombre (opcional)" className="input" aria-label="Nombre del enlace" />

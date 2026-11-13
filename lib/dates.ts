@@ -38,25 +38,31 @@ export function isoWeek(iso: string): number {
   return Math.ceil(((t.getTime() - y0) / 86400000 + 1) / 7);
 }
 
+function parts(iso: string, opts: Intl.DateTimeFormatOptions) {
+  const p = new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", ...opts }).formatToParts(new Date(toUTC(iso)));
+  const get = (t: string) => (p.find((x) => x.type === t)?.value ?? "").replace(/\./g, "");
+  return get;
+}
+
 /** "mié 18 nov" */
 export function fmtDay(iso: string): string {
-  return new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" })
-    .format(new Date(toUTC(iso)))
-    .replace(/\./g, "");
+  const g = parts(iso, { weekday: "short", day: "numeric", month: "short" });
+  return `${g("weekday")} ${g("day")} ${g("month")}`;
 }
 
 /** "18 nov 2026" */
 export function fmtDate(iso: string): string {
-  return new Intl.DateTimeFormat("es-CO", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" })
-    .format(new Date(toUTC(iso)))
-    .replace(/\./g, "");
+  const g = parts(iso, { day: "numeric", month: "short", year: "numeric" });
+  return `${g("day")} ${g("month")} ${g("year")}`;
 }
 
-/** "18 nov, 3:45 p. m." */
+/** "18 nov · 3:45 p. m." (hora Colombia) */
 export function fmtStamp(ts: string): string {
-  return new Intl.DateTimeFormat("es-CO", { timeZone: TZ, day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
-    .format(new Date(ts))
-    .replace(/\./g, "");
+  const p = new Intl.DateTimeFormat("es-CO", {
+    timeZone: TZ, day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
+  }).formatToParts(new Date(ts));
+  const g = (t: string) => p.find((x) => x.type === t)?.value ?? "";
+  return `${g("day")} ${g("month").replace(/\./g, "")} · ${g("hour")}:${g("minute")} ${g("dayPeriod")}`.trim();
 }
 
 export function fmtLongToday(now = new Date()): string {
