@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ensureRecurrences } from "@/lib/recurrence";
 import { sendMail, layout, appUrl, esc } from "@/lib/email";
 import { daysUntil, dueInfo, fmtLongToday, todayISO } from "@/lib/dates";
 import { CLOSED, PRIORITY, type Profile, type Task } from "@/lib/types";
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
 
   const supabase = createAdminClient();
   const today = todayISO();
+  // Primero se crean las tareas repetitivas del día, para que salgan en el resumen
+  const repeticiones = await ensureRecurrences(supabase, today);
   const [{ data: profiles }, { data: tasks, error }] = await Promise.all([
     supabase.from("profiles").select("id, email, full_name"),
     supabase
@@ -77,5 +80,5 @@ export async function GET(request: Request) {
     sent.push(p.email);
   }
 
-  return NextResponse.json({ ok: true, fecha: today, enviados: sent.length });
+  return NextResponse.json({ ok: true, fecha: today, enviados: sent.length, repeticiones });
 }

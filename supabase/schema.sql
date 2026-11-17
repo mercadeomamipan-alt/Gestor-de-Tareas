@@ -49,14 +49,14 @@ create table if not exists public.tasks (
   priority        text not null default 'media'
                   check (priority in ('alta', 'media', 'baja')),
   status          text not null default 'pendiente'
-                  check (status in ('pendiente', 'en_curso', 'en_revision', 'bloqueada', 'hecha', 'cancelada')),
+                  check (status in ('pendiente', 'en_curso', 'en_revision', 'bloqueada', 'hecha', 'cancelada', 'no_realizada')),
   blocked_reason  text not null default '',
   start_date      date,
   due_date        date,
   closed_at       timestamptz,
   estimated_hours numeric(6, 2) check (estimated_hours is null or estimated_hours >= 0),
   recurrence      text not null default 'ninguna'
-                  check (recurrence in ('ninguna', 'semanal', 'mensual')),
+                  check (recurrence in ('ninguna', 'diaria', 'semanal', 'mensual')),
   recurrence_from uuid references public.tasks (id) on delete set null,
   assigned_by     uuid not null references public.profiles (id),
   approved_by     uuid references public.profiles (id),
@@ -68,6 +68,8 @@ create table if not exists public.tasks (
 );
 create index if not exists tasks_due_idx on public.tasks (due_date);
 create index if not exists tasks_status_idx on public.tasks (status);
+create unique index if not exists tasks_recurrence_from_unique
+  on public.tasks (recurrence_from) where recurrence_from is not null;
 
 -- Responsables (una tarea con 2 o más responsables es "compartida")
 create table if not exists public.task_assignees (

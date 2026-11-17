@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser, getProfiles, displayName, type Supa } from "@/lib/data";
 import { sendMail, layout, appUrl, esc } from "@/lib/email";
-import { addDays, addMonths, fmtDate } from "@/lib/dates";
+import { addDays, fmtDate, todayISO, weekdayIndex } from "@/lib/dates";
 import { STATUS, PRIORITY, RECURRENCE, type Status, type Task, type Priority, type Recurrence, type Profile } from "@/lib/types";
 
 export type FormState = { error?: string } | undefined;
@@ -14,6 +14,20 @@ export type FormState = { error?: string } | undefined;
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const dateOrNull = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+
+/** Revisa la fecha de las tareas repetitivas. Las diarias sin fecha empiezan hoy (o el lunes si es domingo). */
+function checkRecurrence(f: ReturnType<typeof parseTaskFields>): string | undefined {
+  if (f.recurrence === "ninguna") return;
+  if (f.recurrence === "diaria") {
+    if (!f.due_date) {
+      const t = todayISO();
+      f.due_date = weekdayIndex(t) === 6 ? addDays(t, 1) : t;
+    }
+    if (weekdayIndex(f.due_date) === 6) return "Las tareas diarias van de lunes a sábado. Elige otra fecha de entrega.";
+    return;
+  }
+  if (!f.due_date) return "Pon la fecha de la primera entrega para que la tarea se pueda repetir.";
+}
 
 function parseTaskFields(fd: FormData) {
   const priority = str(fd, "priority") as Priority;
@@ -72,40 +86,6 @@ const link = (id: string) => `${appUrl()}/tareas/${id}`;
 const emailsOf = (ids: string[], profiles: Record<string, Profile>) =>
   ids.map((id) => profiles[id]?.email).filter((e): e is string => !!e);
 
-/** Si la tarea es recurrente, crea la siguiente al cerrarla (una sola vez). */
-async function spawnNextOccurrence(supabase: Supa, task: Task & { assignees: string[] }, actorId: string) {
-  if (task.recurrence === "ninguna") return;
-  const { data: existing } = await supabase.from("tasks").select("id").eq("recurrence_from", task.id).limit(1);
-  if (existing && existing.length) return;
-  const shift = (d: string | null) => (d ? (task.recurrence === "semanal" ? addDays(d, 7) : addMonths(d, 1)) : null);
-  const { data: next, error } = await supabase
-    .from("tasks")
-    .insert({
-      title: task.title,
-      description: task.description,
-      project: task.project,
-      priority: task.priority,
-      recurrence: task.recurrence,
-      recurrence_from: task.id,
-      start_date: shift(task.start_date),
-      due_date: shift(task.due_date),
-      assigned_by: task.assigned_by,
-      created_by: actorId,
-      updated_by: actorId,
-    })
-    .select("id")
-    .single();
-  if (error || !next) return;
-  if (task.assignees.length) {
-    await supabase.from("task_assignees").insert(task.assignees.map((u) => ({ task_id: next.id, user_id: u })));
-  }
-  const { data: reqs } = await supabase.from("requirements").select("body, position").eq("task_id", task.id);
-  if (reqs?.length) {
-    await supabase.from("requirements").insert(reqs.map((r) => ({ task_id: next.id, body: r.body, position: r.position })));
-  }
-  await logEvent(supabase, next.id, actorId, "creada", "Siguiente repetición creada automáticamente");
-}
-
 // ---------------------------------------------------------------- crear / editar
 
 export async function createTask(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -113,6 +93,8 @@ export async function createTask(_prev: FormState, fd: FormData): Promise<FormSt
   const f = parseTaskFields(fd);
   if (!f.title) return { error: "Escribe el título de la tarea." };
   if (!f.assignees.length) return { error: "Elige al menos un responsable." };
+  const recErr = checkRecurrence(f);
+  if (recErr) return { error: recErr };
   if (f.start_date && f.due_date && f.start_date > f.due_date)
     return { error: "La fecha de inicio no puede ser posterior a la fecha de entrega." };
 
@@ -175,6 +157,8 @@ export async function updateTask(_prev: FormState, fd: FormData): Promise<FormSt
   const f = parseTaskFields(fd);
   if (!f.title) return { error: "Escribe el título de la tarea." };
   if (!f.assignees.length) return { error: "Elige al menos un responsable." };
+  const recErr = checkRecurrence(f);
+  if (recErr) return { error: recErr };
   if (f.start_date && f.due_date && f.start_date > f.due_date)
     return { error: "La fecha de inicio no puede ser posterior a la fecha de entrega." };
 
@@ -327,7 +311,8 @@ export async function changeStatus(_prev: FormState, fd: FormData): Promise<Form
   if (!task) return { error: "Esta tarea ya no existe." };
 
   const isAssigner = task.assigned_by === me.id;
-  if (status === "hecha" && !isAssigner) status = "en_revision";
+  // Las tareas repetitivas no necesitan aprobación; las demás sí, si no las asignaste tú
+  if (status === "hecha" && !isAssigner && task.recurrence === "ninguna") status = "en_revision";
 
   const blockedReason = str(fd, "blocked_reason");
   if (status === "bloqueada" && !blockedReason) return { error: "Escribe qué está bloqueando la tarea." };
@@ -341,7 +326,7 @@ export async function changeStatus(_prev: FormState, fd: FormData): Promise<Form
     blocked_reason: status === "bloqueada" ? blockedReason : "",
     closed_at: status === "hecha" || status === "cancelada" ? now : null,
   };
-  if (status === "hecha") {
+  if (status === "hecha" && (isAssigner || task.recurrence === "ninguna")) {
     patch.approved_by = me.id;
     patch.approved_at = now;
   } else {
@@ -358,7 +343,6 @@ export async function changeStatus(_prev: FormState, fd: FormData): Promise<Form
     "estado",
     `${STATUS[task.status]} → ${STATUS[status]}${status === "bloqueada" ? ` (${blockedReason})` : ""}`,
   );
-  if (status === "hecha") await spawnNextOccurrence(supabase, task, me.id);
 
   if (status === "en_revision" && task.assigned_by !== me.id) {
     const profiles = await getProfiles(supabase);
@@ -398,7 +382,6 @@ export async function reviewTask(_prev: FormState, fd: FormData): Promise<FormSt
       .eq("id", id);
     await logEvent(supabase, id, me.id, "aprobada", reason);
     if (reason) await supabase.from("task_notes").insert({ task_id: id, author_id: me.id, body: `Aprobada: ${reason}` });
-    await spawnNextOccurrence(supabase, task, me.id);
   } else {
     await supabase
       .from("tasks")

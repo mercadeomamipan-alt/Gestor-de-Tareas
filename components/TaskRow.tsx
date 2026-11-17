@@ -43,7 +43,7 @@ export function TaskRow({
               {unreadNotes ? <b style={{ color: "var(--accent)" }}> · {unreadNotes} nueva{unreadNotes > 1 ? "s" : ""}</b> : null}
             </span>
           )}
-          {t.recurrence !== "ninguna" && <span>↻ {t.recurrence}</span>}
+          {t.recurrence !== "ninguna" && <span>↻ {t.recurrence === "diaria" ? "diaria" : t.recurrence}</span>}
         </span>
       </span>
       <span className="right">

@@ -5,16 +5,22 @@ export const STATUS = {
   bloqueada: "Bloqueada",
   hecha: "Hecha",
   cancelada: "Cancelada",
+  no_realizada: "No realizada",
 } as const;
 export type Status = keyof typeof STATUS;
 
 export const PRIORITY = { alta: "Alta", media: "Media", baja: "Baja" } as const;
 export type Priority = keyof typeof PRIORITY;
 
-export const RECURRENCE = { ninguna: "No se repite", semanal: "Cada semana", mensual: "Cada mes" } as const;
+export const RECURRENCE = {
+  ninguna: "No se repite",
+  diaria: "Cada día (lunes a sábado)",
+  semanal: "Cada semana",
+  mensual: "Cada mes",
+} as const;
 export type Recurrence = keyof typeof RECURRENCE;
 
-export const CLOSED: Status[] = ["hecha", "cancelada"];
+export const CLOSED: Status[] = ["hecha", "cancelada", "no_realizada"];
 export const isOpen = (s: Status) => !CLOSED.includes(s);
 
 /** hue: tono de color asignado a la persona (distinto para cada miembro del equipo). */

@@ -118,7 +118,10 @@ export default async function TaskPage({
   const history = [
     ...events.map((e) => ({
       at: e.created_at,
-      text: `${name(e.actor_id)} ${EVENT_LABEL[e.kind] ?? e.kind}${e.detail ? `: ${e.detail}` : ""}`,
+      text:
+        e.kind === "auto"
+          ? `Automático: ${e.detail}`
+          : `${name(e.actor_id)} ${EVENT_LABEL[e.kind] ?? e.kind}${e.detail ? `: ${e.detail}` : ""}`,
     })),
     ...dueChanges.map((c) => ({
       at: c.changed_at,
@@ -164,6 +167,26 @@ export default async function TaskPage({
             <p><b>Bloqueada:</b> {task.blocked_reason}</p>
           </div>
         )}
+        {task.status === "no_realizada" && (
+          <div className="callout missed">
+            <p>
+              <b>No realizada.</b> Era una tarea diaria y no se cerró ese día, así que se marcó sola.
+              {nextRes.data && (
+                <>
+                  {" "}
+                  <Link href={`/tareas/${nextRes.data.id}`}>Ver la repetición siguiente</Link>
+                </>
+              )}
+            </p>
+          </div>
+        )}
+        {task.recurrence !== "ninguna" && isOpen(task.status) && nextRes.data && (
+          <div className="callout">
+            <p>
+              ↻ Ya existe la repetición siguiente: <Link href={`/tareas/${nextRes.data.id}`}>abrirla</Link>
+            </p>
+          </div>
+        )}
         {task.status === "hecha" && (
           <div className="callout done">
             <p>
@@ -187,7 +210,13 @@ export default async function TaskPage({
           <div className="stack">
             <section className="card">
               <h2>Estado</h2>
-              <StatusControl taskId={id} current={task.status} isAssigner={isAssigner} blockedReason={task.blocked_reason} />
+              <StatusControl
+                taskId={id}
+                current={task.status}
+                isAssigner={isAssigner}
+                recurring={task.recurrence !== "ninguna"}
+                blockedReason={task.blocked_reason}
+              />
             </section>
 
             {task.description && (

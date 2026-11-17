@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { PRIORITY, RECURRENCE, type Profile, type Task } from "@/lib/types";
 import type { FormState } from "@/app/tareas/actions";
-import { SubmitButton } from "./SubmitButton";
 import { Avatar } from "./Avatar";
 
 type Props = {
@@ -17,7 +16,7 @@ type Props = {
 };
 
 export function TaskForm({ mode, action, people, meId, projects, task }: Props) {
-  const [state, formAction] = useActionState(action, undefined);
+  const [state, formAction, pending] = useActionState(action, undefined);
   const [due, setDue] = useState(task?.due_date ?? "");
   const originalDue = task?.due_date ?? "";
   const needsReason = mode === "editar" && !!originalDue && due !== originalDue;
@@ -25,7 +24,16 @@ export function TaskForm({ mode, action, people, meId, projects, task }: Props) 
   const nameOf = (p: Profile) => (p.id === meId ? `${p.full_name || p.email} (tú)` : p.full_name || p.email);
 
   return (
-    <form action={formAction} className="card" style={{ gap: 18 }}>
+    <form
+      className="card"
+      style={{ gap: 18 }}
+      onSubmit={(e) => {
+        // Se envía a mano para que, si hay un error, no se borre lo que la persona escribió
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        startTransition(() => formAction(fd));
+      }}
+    >
       {task && <input type="hidden" name="id" value={task.id} />}
 
       <div className="field">
@@ -108,7 +116,11 @@ export function TaskForm({ mode, action, people, meId, projects, task }: Props) 
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <p className="hint">Al cerrarla como hecha se crea sola la siguiente, con las fechas corridas y los mismos requisitos.</p>
+        <p className="hint">
+          La siguiente aparece sola en su fecha, se haya hecho o no la anterior, con los mismos requisitos. Las diarias
+          aparecen cada mañana de lunes a sábado y, si una no se cierra ese día, queda como “no realizada”. Las tareas
+          repetitivas se cierran sin aprobación.
+        </p>
       </div>
 
       {mode === "crear" && (
@@ -122,7 +134,9 @@ export function TaskForm({ mode, action, people, meId, projects, task }: Props) 
 
       <div className="form-actions">
         <Link href={task ? `/tareas/${task.id}` : "/"} className="btn">Cancelar</Link>
-        <SubmitButton pendingText="Guardando…">{mode === "crear" ? "Crear tarea" : "Guardar cambios"}</SubmitButton>
+        <button type="submit" className="btn primary" disabled={pending}>
+          {pending ? "Guardando…" : mode === "crear" ? "Crear tarea" : "Guardar cambios"}
+        </button>
       </div>
     </form>
   );

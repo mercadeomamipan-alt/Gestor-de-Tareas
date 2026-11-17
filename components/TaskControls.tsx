@@ -20,17 +20,20 @@ export function StatusControl({
   taskId,
   current,
   isAssigner,
+  recurring = false,
   blockedReason,
 }: {
   taskId: string;
   current: Status;
   isAssigner: boolean;
+  recurring?: boolean;
   blockedReason: string;
 }) {
   const [state, action] = useActionState(changeStatus, undefined);
   const [blocking, setBlocking] = useState(false);
-  const options: Status[] = ["pendiente", "en_curso", "bloqueada", isAssigner ? "hecha" : "en_revision", "cancelada"];
-  const label = (s: Status) => (s === "en_revision" && !isAssigner ? "Terminé: enviar a revisión" : STATUS[s]);
+  const canClose = isAssigner || recurring;
+  const options: Status[] = ["pendiente", "en_curso", "bloqueada", canClose ? "hecha" : "en_revision", "cancelada"];
+  const label = (s: Status) => (s === "en_revision" && !canClose ? "Terminé: enviar a revisión" : STATUS[s]);
 
   return (
     <div className="status-form">
@@ -67,7 +70,8 @@ export function StatusControl({
           <SubmitButton className="btn" pendingText="…">Marcar bloqueada</SubmitButton>
         </form>
       )}
-      {!isAssigner && <p className="hint">Quien asignó la tarea la aprueba antes de quedar como hecha.</p>}
+      {!canClose && <p className="hint">Quien asignó la tarea la aprueba antes de quedar como hecha.</p>}
+      {recurring && !isAssigner && <p className="hint">Es una tarea repetitiva: se cierra sin aprobación.</p>}
       {state?.error && <p className="form-error" role="alert">{state.error}</p>}
     </div>
   );

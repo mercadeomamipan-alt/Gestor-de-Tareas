@@ -14,7 +14,8 @@ App web para hacerle seguimiento a tareas propias y compartidas entre dos person
 - **Notas de avance** con autor y fecha.
 - **Adjuntos:** enlaces y archivos de hasta 10 MB.
 - **Historial** de todo lo que cambió en cada tarea.
-- **Tareas recurrentes:** al cerrarla como hecha se crea sola la siguiente.
+- **Tareas repetitivas** (diaria de lunes a sábado, semanal o mensual): la siguiente aparece sola en su fecha, se haya hecho o no la anterior. Las diarias que no se cierran ese día quedan como *no realizada*. Las repetitivas se cierran sin aprobación.
+- **Calendario** por mes, semana o día, con colores por persona, carga de trabajo y arrastrar para cambiar fechas.
 - **Panel "Requiere tu atención":** tareas vencidas, las que vencen hoy o mañana, las que esperan tu aprobación, las que te asignaron y notas nuevas.
 - **Correos inmediatos** cuando:
   - te asignan una tarea
@@ -99,6 +100,16 @@ Los correos salen de una cuenta de Gmail. Puede ser la tuya o una creada para es
 
 En Supabase → **Authentication** → **URL Configuration**:
 - **Site URL:** la dirección de Vercel (ej. `https://gestor-de-tareas.vercel.app`)
+
+### Paso 6b · Actualizaciones de la base de datos
+
+Si instalaste la app antes de que existieran, corre también estos archivos (una vez cada uno, en orden) en **SQL Editor**:
+
+| Archivo | Para qué |
+|---|---|
+| [`supabase/migrations/002_repeticion_diaria.sql`](supabase/migrations/002_repeticion_diaria.sql) | Repetición diaria, estado "No realizada" y evitar repeticiones duplicadas |
+
+Si instalas desde cero con `schema.sql`, ya vienen incluidas.
 
 ### Paso 7 · Probar
 

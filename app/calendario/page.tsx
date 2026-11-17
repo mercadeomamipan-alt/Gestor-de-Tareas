@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Header } from "@/components/Header";
 import { FilterBar } from "@/components/FilterBar";
 import { Calendar, type View } from "@/components/Calendar";
+import { ensureRecurrences } from "@/lib/recurrence";
 import { requireUser, getProfiles, listTasks } from "@/lib/data";
 import { addDays, endOfMonth, isValidISO, startOfMonth, startOfWeek, todayISO, daysUntil } from "@/lib/dates";
 import { isOpen, type TaskListItem } from "@/lib/types";
@@ -32,6 +33,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
   }
 
   const { supabase, me } = await requireUser();
+  await ensureRecurrences(supabase);
   const [profiles, all] = await Promise.all([getProfiles(supabase), listTasks(supabase)]);
 
   const mine = (t: TaskListItem) => t.assignees.includes(me.id);

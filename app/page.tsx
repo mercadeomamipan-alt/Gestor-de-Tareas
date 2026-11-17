@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Header } from "@/components/Header";
 import { FilterBar } from "@/components/FilterBar";
 import { TaskRow } from "@/components/TaskRow";
+import { ensureRecurrences } from "@/lib/recurrence";
 import { requireUser, getProfiles, listTasks, getReads, getRecentNotesByOthers, displayName } from "@/lib/data";
 import { daysUntil, dueInfo, fmtLongToday, isoWeek, todayISO } from "@/lib/dates";
 import { STATUS, isOpen, type Status, type TaskListItem } from "@/lib/types";
@@ -24,6 +25,7 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const q = get("q").toLowerCase();
 
   const { supabase, me } = await requireUser();
+  await ensureRecurrences(supabase);
   const [profiles, tasks, reads, notes] = await Promise.all([
     getProfiles(supabase),
     listTasks(supabase),
