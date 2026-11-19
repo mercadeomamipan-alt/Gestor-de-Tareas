@@ -76,9 +76,9 @@ function taskSummaryHtml(t: Pick<Task, "title" | "due_date" | "priority" | "desc
   ];
   return (
     `<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;margin:4px 0 8px">` +
-    rows.map(([k, v]) => `<tr><td style="color:#5d6879;padding:3px 14px 3px 0">${k}</td><td style="padding:3px 0"><b>${v}</b></td></tr>`).join("") +
+    rows.map(([k, v]) => `<tr><td style="color:#7a5c43;padding:3px 14px 3px 0">${k}</td><td style="padding:3px 0"><b>${v}</b></td></tr>`).join("") +
     `</table>` +
-    (t.description ? `<p style="margin:8px 0 0;color:#18202e;white-space:pre-wrap">${esc(t.description.slice(0, 600))}</p>` : "")
+    (t.description ? `<p style="margin:8px 0 0;color:#2b1a0e;white-space:pre-wrap">${esc(t.description.slice(0, 600))}</p>` : "")
   );
 }
 
@@ -229,7 +229,7 @@ export async function updateTask(_prev: FormState, fd: FormData): Promise<FormSt
         layout({
           heading: `Nueva fecha de entrega: ${to}`,
           intro: `${actor} movió la entrega de “${f.title}” del ${from} al ${to}.`,
-          bodyHtml: reason ? `<p style="margin:0"><span style="color:#5d6879">Motivo:</span> ${esc(reason)}</p>` : "",
+          bodyHtml: reason ? `<p style="margin:0"><span style="color:#7a5c43">Motivo:</span> ${esc(reason)}</p>` : "",
           cta: { label: "Ver la tarea", href: link(id) },
         }),
       );
@@ -281,7 +281,7 @@ export async function rescheduleTask(_prev: FormState, fd: FormData): Promise<Fo
         layout({
           heading: `Nueva fecha de entrega: ${to}`,
           intro: `${actor} movió la entrega de “${before.title}” del ${from} al ${to}.`,
-          bodyHtml: reason ? `<p style="margin:0"><span style="color:#5d6879">Motivo:</span> ${esc(reason)}</p>` : "",
+          bodyHtml: reason ? `<p style="margin:0"><span style="color:#7a5c43">Motivo:</span> ${esc(reason)}</p>` : "",
           cta: { label: "Ver la tarea", href: link(id) },
         }),
       );
@@ -405,7 +405,7 @@ export async function reviewTask(_prev: FormState, fd: FormData): Promise<FormSt
             decision === "aprobar"
               ? `${actor} aprobó “${task.title}”.`
               : `${actor} devolvió “${task.title}” y quedó otra vez en curso.`,
-          bodyHtml: reason ? `<p style="margin:0"><span style="color:#5d6879">Comentario:</span> ${esc(reason)}</p>` : "",
+          bodyHtml: reason ? `<p style="margin:0"><span style="color:#7a5c43">Comentario:</span> ${esc(reason)}</p>` : "",
           cta: { label: "Ver la tarea", href: link(id) },
         }),
       );

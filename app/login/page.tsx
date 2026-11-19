@@ -9,9 +9,10 @@ export default function LoginPage() {
   return (
     <main className="login">
       <form action={action} className="login-card">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          Gestor de Tareas
+        <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Mamipan" className="login-logo" width={240} height={180} />
+          <span className="brand-name">Gestor de tareas</span>
         </div>
         <h1>Inicia sesión</h1>
         <div className="field">

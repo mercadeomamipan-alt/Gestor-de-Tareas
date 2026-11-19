@@ -8,9 +8,10 @@ export function Header({ me }: { me: Profile }) {
   return (
     <header className="appbar">
       <div className="appbar-inner">
-        <Link href="/" className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          Gestor de Tareas
+        <Link href="/" className="brand" aria-label="Tareas Mamipan, inicio">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Mamipan" width={59} height={44} />
+          <span className="brand-name">Tareas</span>
         </Link>
         <NavTabs />
         <nav className="appbar-nav">

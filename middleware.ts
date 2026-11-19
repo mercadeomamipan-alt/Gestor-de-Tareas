@@ -43,5 +43,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg).*)"],
+  // Imágenes públicas (logo, íconos) no pasan por el inicio de sesión: se ven en el login y en los correos
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|.*\\.(?:png|jpg|jpeg|svg|ico|webp)$).*)"],
 };

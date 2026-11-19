@@ -54,9 +54,9 @@ export async function GET(request: Request) {
         : `<h3 style="margin:18px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:${color}">${title} (${list.length})</h3>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${list
              .map(
-               (t) => `<tr><td style="padding:7px 0;border-top:1px solid #e9edf3">
-                 <a href="${appUrl()}/tareas/${t.id}" style="color:#18202e;font-weight:bold;text-decoration:none">${esc(t.title)}</a>
-                 <div style="font-size:13px;color:#5d6879">${esc(sub(t))}</div></td></tr>`,
+               (t) => `<tr><td style="padding:7px 0;border-top:1px solid #f2e6d3">
+                 <a href="${appUrl()}/tareas/${t.id}" style="color:#2b1a0e;font-weight:bold;text-decoration:none">${esc(t.title)}</a>
+                 <div style="font-size:13px;color:#7a5c43">${esc(sub(t))}</div></td></tr>`,
              )
              .join("")}</table>`;
     const dueSub = (t: T) => `${dueInfo(t.due_date, today).text} · Prioridad ${PRIORITY[t.priority].toLowerCase()}`;
@@ -65,14 +65,14 @@ export async function GET(request: Request) {
       heading: `Tu día: ${fmtLongToday()}`,
       intro: `Tienes ${total} ${total === 1 ? "asunto" : "asuntos"} que mirar hoy.`,
       bodyHtml:
-        section("Vencidas", "#c4352b", late, dueSub) +
+        section("Vencidas", "#9f1124", late, dueSub) +
         section("Vencen hoy", "#a56a00", todayT, dueSub) +
         section("Vencen mañana", "#a56a00", tomorrow, dueSub) +
         section("Esperan tu aprobación", "#0b7c8c", toApprove, (t) =>
           `Enviada por ${t.task_assignees.map((a) => nm(a.user_id)).join(", ")}`,
         ) +
         (blocked.length
-          ? `<p style="margin:16px 0 0;font-size:13px;color:#5d6879">Además tienes ${blocked.length} tarea(s) bloqueada(s).</p>`
+          ? `<p style="margin:16px 0 0;font-size:13px;color:#7a5c43">Además tienes ${blocked.length} tarea(s) bloqueada(s).</p>`
           : ""),
       cta: { label: "Abrir el Gestor de Tareas", href: appUrl() || "#" },
     });

@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Familjen_Grotesk, Figtree, JetBrains_Mono } from "next/font/google";
+import { Baloo_2, Figtree, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Familjen_Grotesk({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display" });
+// Letra redondeada y gruesa, en la línea del logo de Mamipan
+const display = Baloo_2({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--font-display" });
 const body = Figtree({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-body" });
 const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Gestor de Tareas",
+  title: "Tareas Mamipan",
   description: "Tareas propias y compartidas, con fechas de entrega, requisitos y aprobaciones.",
 };
 
