@@ -16,6 +16,7 @@ App web para hacerle seguimiento a tareas propias y compartidas entre dos person
 - **Historial** de todo lo que cambió en cada tarea.
 - **Tareas repetitivas** (diaria de lunes a sábado, semanal o mensual): la siguiente aparece sola en su fecha, se haya hecho o no la anterior. Las diarias que no se cierran ese día quedan como *no realizada*. Las repetitivas se cierran sin aprobación.
 - **Calendario** por mes, semana o día, con colores por persona, carga de trabajo y arrastrar para cambiar fechas.
+- **Eventos y reuniones**: fecha y hora, lugar o enlace, participantes, agenda, notas o acta, repetición y tareas vinculadas (crear una tarea desde el evento o vincular una existente). Salen en el calendario, en el panel de inicio y en el resumen diario.
 - **Panel "Requiere tu atención":** tareas vencidas, las que vencen hoy o mañana, las que esperan tu aprobación, las que te asignaron y notas nuevas.
 - **Correos inmediatos** cuando:
   - te asignan una tarea
@@ -108,6 +109,7 @@ Si instalaste la app antes de que existieran, corre también estos archivos (una
 | Archivo | Para qué |
 |---|---|
 | [`supabase/migrations/002_repeticion_diaria.sql`](supabase/migrations/002_repeticion_diaria.sql) | Repetición diaria, estado "No realizada" y evitar repeticiones duplicadas |
+| [`supabase/migrations/003_eventos.sql`](supabase/migrations/003_eventos.sql) | Eventos y reuniones, y tareas vinculadas a eventos |
 
 Si instalas desde cero con `schema.sql`, ya vienen incluidas.
 

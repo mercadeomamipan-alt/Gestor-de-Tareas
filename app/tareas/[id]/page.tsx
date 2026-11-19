@@ -81,6 +81,9 @@ export default async function TaskPage({
   const dueChanges = (dueRes.data ?? []) as DueChange[];
   const events = (evRes.data ?? []) as TaskEvent[];
   const lastRead = readRes.data?.last_read_at ?? null;
+  const linkedEvent = task.event_id
+    ? (await supabase.from("events").select("id, title, event_date").eq("id", task.event_id).maybeSingle()).data
+    : null;
 
   // Marca la tarea como leída por esta persona (después de calcular qué era nuevo)
   await supabase.from("task_reads").upsert({ task_id: id, user_id: me.id, last_read_at: new Date().toISOString() });
@@ -148,6 +151,9 @@ export default async function TaskPage({
           </div>
           <div className="actions">
             <Link href={`/tareas/${id}?editar=1`} className="btn">Editar</Link>
+            {!linkedEvent && (
+              <Link href={`/eventos/nuevo?tarea=${id}`} className="btn">Agendar reunión</Link>
+            )}
           </div>
         </div>
 
@@ -301,6 +307,15 @@ export default async function TaskPage({
                     ))}
                   </dd>
                 </div>
+                {linkedEvent && (
+                  <div>
+                    <dt>Evento</dt>
+                    <dd>
+                      <Link href={`/eventos/${linkedEvent.id}`}>{linkedEvent.title}</Link>
+                      <span className="muted">· {fmtDate(linkedEvent.event_date)}</span>
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt>Asignada por</dt>
                   <dd><span className="person"><Avatar p={profiles[task.assigned_by]} size={22} />{name(task.assigned_by)}</span></dd>

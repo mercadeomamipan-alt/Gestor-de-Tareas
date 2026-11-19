@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ensureRecurrences } from "@/lib/recurrence";
+import { ensureEventRecurrences, listEvents } from "@/lib/events";
 import { sendMail, layout, appUrl, esc } from "@/lib/email";
-import { daysUntil, dueInfo, fmtLongToday, todayISO } from "@/lib/dates";
+import { daysUntil, dueInfo, fmtLongToday, fmtTimeRange, todayISO } from "@/lib/dates";
 import { CLOSED, PRIORITY, type Profile, type Task } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ export async function GET(request: Request) {
   const today = todayISO();
   // Primero se crean las tareas repetitivas del día, para que salgan en el resumen
   const repeticiones = await ensureRecurrences(supabase, today);
+  await ensureEventRecurrences(supabase, today);
+  const todaysEvents = await listEvents(supabase, today, today);
   const [{ data: profiles }, { data: tasks, error }] = await Promise.all([
     supabase.from("profiles").select("id, email, full_name"),
     supabase
@@ -45,7 +48,8 @@ export async function GET(request: Request) {
     const tomorrow = mine.filter((t) => t.due_date && daysUntil(t.due_date, today) === 1);
     const toApprove = open.filter((t) => t.status === "en_revision" && t.assigned_by === p.id);
     const blocked = mine.filter((t) => t.status === "bloqueada");
-    const total = late.length + todayT.length + tomorrow.length + toApprove.length;
+    const myEvents = todaysEvents.filter((e) => e.participants.includes(p.id));
+    const total = late.length + todayT.length + tomorrow.length + toApprove.length + myEvents.length;
     if (total === 0) continue; // sin novedades: no se envía correo
 
     const section = (title: string, color: string, list: T[], sub: (t: T) => string) =>
@@ -65,6 +69,16 @@ export async function GET(request: Request) {
       heading: `Tu día: ${fmtLongToday()}`,
       intro: `Tienes ${total} ${total === 1 ? "asunto" : "asuntos"} que mirar hoy.`,
       bodyHtml:
+        (myEvents.length
+          ? `<h3 style="margin:18px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#824812">Tus eventos de hoy (${myEvents.length})</h3>
+             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${myEvents
+               .map(
+                 (e) => `<tr><td style="padding:7px 0;border-top:1px solid #f2e6d3">
+                   <a href="${appUrl()}/eventos/${e.id}" style="color:#2b1a0e;font-weight:bold;text-decoration:none">${esc(e.title)}</a>
+                   <div style="font-size:13px;color:#7a5c43">${esc(fmtTimeRange(e.start_time, e.end_time))}${e.location ? ` · ${esc(e.location)}` : ""}</div></td></tr>`,
+               )
+               .join("")}</table>`
+          : "") +
         section("Vencidas", "#9f1124", late, dueSub) +
         section("Vencen hoy", "#a56a00", todayT, dueSub) +
         section("Vencen mañana", "#a56a00", tomorrow, dueSub) +

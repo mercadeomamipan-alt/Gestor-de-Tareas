@@ -113,3 +113,25 @@ export const fmtMonthYear = (iso: string) => fmt(iso, { month: "long", year: "nu
 export const fmtLongDay = (iso: string) => fmt(iso, { weekday: "long", day: "numeric", month: "long" });
 /** "lun" */
 export const fmtWeekdayShort = (iso: string) => fmt(iso, { weekday: "short" }).replace(/\./g, "");
+
+/** "10:30:00" → "10:30 a. m." */
+export function fmtTime(t: string | null | undefined): string {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const period = h < 12 ? "a. m." : "p. m.";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+/** "10:00 a. m. – 11:30 a. m." o "Todo el día" */
+export function fmtTimeRange(start: string | null, end: string | null): string {
+  if (!start) return "Todo el día";
+  return end ? `${fmtTime(start)} – ${fmtTime(end)}` : fmtTime(start);
+}
+
+/** Siguiente día de lunes a sábado después de la fecha dada. */
+export function nextWorkday(iso: string): string {
+  let d = addDays(iso, 1);
+  if (weekdayIndex(d) === 6) d = addDays(d, 1);
+  return d;
+}

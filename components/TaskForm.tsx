@@ -13,14 +13,16 @@ type Props = {
   meId: string;
   projects: string[];
   task?: Task & { assignees: string[] };
+  /** Valores iniciales al crear una tarea desde un evento */
+  defaults?: { eventId?: string; eventTitle?: string; assignees?: string[]; due?: string };
 };
 
-export function TaskForm({ mode, action, people, meId, projects, task }: Props) {
+export function TaskForm({ mode, action, people, meId, projects, task, defaults }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
-  const [due, setDue] = useState(task?.due_date ?? "");
+  const [due, setDue] = useState(task?.due_date ?? defaults?.due ?? "");
   const originalDue = task?.due_date ?? "";
   const needsReason = mode === "editar" && !!originalDue && due !== originalDue;
-  const assigned = new Set(task?.assignees ?? [meId]);
+  const assigned = new Set(task?.assignees ?? defaults?.assignees ?? [meId]);
   const nameOf = (p: Profile) => (p.id === meId ? `${p.full_name || p.email} (tú)` : p.full_name || p.email);
 
   return (
@@ -35,6 +37,12 @@ export function TaskForm({ mode, action, people, meId, projects, task }: Props) 
       }}
     >
       {task && <input type="hidden" name="id" value={task.id} />}
+      {defaults?.eventId && <input type="hidden" name="event_id" value={defaults.eventId} />}
+      {defaults?.eventTitle && (
+        <p className="hint">
+          Esta tarea quedará vinculada al evento <b>{defaults.eventTitle}</b>.
+        </p>
+      )}
 
       <div className="field">
         <label htmlFor="title">Tarea</label>

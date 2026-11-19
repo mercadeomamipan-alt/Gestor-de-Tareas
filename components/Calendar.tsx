@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { rescheduleTask } from "@/app/tareas/actions";
+import { rescheduleEvent } from "@/app/eventos/actions";
 import {
   addDays,
   addMonths,
@@ -11,13 +12,15 @@ import {
   fmtDay,
   fmtLongDay,
   fmtMonthYear,
+  fmtTime,
   fmtWeekdayShort,
   isoWeek,
   startOfWeek,
 } from "@/lib/dates";
 import { displayName, personHue } from "@/lib/people";
-import { isOpen, STATUS, type Profile, type TaskListItem } from "@/lib/types";
+import { EVENT_KIND, isOpen, STATUS, type EventListItem, type Profile, type TaskListItem } from "@/lib/types";
 import { TaskRow } from "./TaskRow";
+import { EventRow } from "./EventRow";
 import { SubmitButton } from "./SubmitButton";
 
 export type View = "mes" | "semana" | "dia";
@@ -29,6 +32,7 @@ type Props = {
   from: string;
   to: string;
   tasks: TaskListItem[];
+  events: EventListItem[];
   overdue: TaskListItem[];
   noDateCount: number;
   profiles: Record<string, Profile>;
@@ -37,10 +41,11 @@ type Props = {
 };
 
 const WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
-const MAX_CHIPS = 3;
+const MAX_CHIPS = 4;
 
 export function Calendar(props: Props) {
-  const { view, anchor, today, from, to, tasks, overdue, noDateCount, profiles, meId, query } = props;
+  const { view, anchor, today, from, to, tasks, events, overdue, noDateCount, profiles, meId, query } = props;
+  const [, startMove] = useTransition();
   const [moving, setMoving] = useState<{ task: TaskListItem; date: string } | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overDate, setOverDate] = useState<string | null>(null);
@@ -65,6 +70,9 @@ export function Calendar(props: Props) {
   for (const list of Object.values(byDate))
     list.sort((a, b) => Number(!isOpen(a.status)) - Number(!isOpen(b.status)) || PRIO[a.priority] - PRIO[b.priority]);
 
+  const evByDate: Record<string, EventListItem[]> = {};
+  for (const e of events) (evByDate[e.event_date] ??= []).push(e);
+
   const openCount = (d: string) => (byDate[d] ?? []).filter((t) => isOpen(t.status)).length;
   const days: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
@@ -78,6 +86,7 @@ export function Calendar(props: Props) {
   const maxPerson = Math.max(1, ...perPerson.map((x) => x.n));
   const totalOpen = tasks.filter((t) => isOpen(t.status)).length;
   const totalDone = tasks.length - totalOpen;
+  const evCount = (d: string) => (evByDate[d] ?? []).length;
 
   const title =
     view === "mes"
@@ -100,10 +109,22 @@ export function Calendar(props: Props) {
     },
     onDrop: (e: React.DragEvent) => {
       e.preventDefault();
-      const id = e.dataTransfer.getData("text/task-id") || dragId;
+      const id = e.dataTransfer.getData("text/item-id") || dragId || "";
       setOverDate(null);
       setDragId(null);
-      const task = tasks.find((t) => t.id === id);
+      if (id.startsWith("e:")) {
+        const ev = events.find((x) => x.id === id.slice(2));
+        if (ev && ev.event_date !== date) {
+          const fd = new FormData();
+          fd.set("id", ev.id);
+          fd.set("event_date", date);
+          startMove(async () => {
+            await rescheduleEvent(undefined, fd);
+          });
+        }
+        return;
+      }
+      const task = tasks.find((t) => t.id === id.slice(2));
       if (task && task.due_date !== date) setMoving({ task, date });
     },
   });
@@ -117,14 +138,14 @@ export function Calendar(props: Props) {
     return (
       <Link
         href={`/tareas/${t.id}`}
-        className={`chip${isOpen(t.status) ? "" : " closed"}${late ? " late" : ""}${t.assignees.length > 1 ? " shared" : ""}${dragId === t.id ? " dragging" : ""}`}
+        className={`chip${isOpen(t.status) ? "" : " closed"}${late ? " late" : ""}${t.assignees.length > 1 ? " shared" : ""}${dragId === "t:" + t.id ? " dragging" : ""}`}
         style={{ ["--h" as string]: h1, ["--h2" as string]: h2 }}
         title={`${t.title} · ${who} · ${STATUS[t.status]}${late ? " · vencida" : ""}`}
         draggable={canDrag(t)}
         onDragStart={(e) => {
-          e.dataTransfer.setData("text/task-id", t.id);
+          e.dataTransfer.setData("text/item-id", "t:" + t.id);
           e.dataTransfer.effectAllowed = "move";
-          setDragId(t.id);
+          setDragId("t:" + t.id);
         }}
         onDragEnd={() => {
           setDragId(null);
@@ -132,6 +153,33 @@ export function Calendar(props: Props) {
         }}
       >
         <span className="chip-title">{t.title}</span>
+      </Link>
+    );
+  };
+
+  const EventChip = ({ e }: { e: EventListItem }) => {
+    const who = e.participants.map((a) => displayName(profiles[a])).join(" y ");
+    return (
+      <Link
+        href={`/eventos/${e.id}`}
+        className={`chip event${e.event_date < today ? " closed-ev" : ""}${dragId === "e:" + e.id ? " dragging" : ""}`}
+        title={`${EVENT_KIND[e.kind]}: ${e.title} · ${e.start_time ? fmtTime(e.start_time) : "todo el día"} · ${who}`}
+        draggable
+        onDragStart={(ev) => {
+          ev.dataTransfer.setData("text/item-id", "e:" + e.id);
+          ev.dataTransfer.effectAllowed = "move";
+          setDragId("e:" + e.id);
+        }}
+        onDragEnd={() => {
+          setDragId(null);
+          setOverDate(null);
+        }}
+      >
+        <span className="chip-title">
+          <span className="ev-clock" aria-hidden="true" />
+          {e.start_time && <span className="ev-t">{fmtTime(e.start_time).replace(/ ?([ap])\. m\./, "$1")}</span>}
+          {e.title}
+        </span>
       </Link>
     );
   };
@@ -168,6 +216,7 @@ export function Calendar(props: Props) {
               abiertas que vencen en este {view === "mes" ? "mes" : "período"}
               {totalDone > 0 && <> · {totalDone} cerradas</>}
               {noDateCount > 0 && <> · {noDateCount} sin fecha</>}
+              {events.length > 0 && <> · {events.length} evento{events.length > 1 ? "s" : ""}</>}
             </span>
           </div>
           <ul className="load-people">
@@ -185,7 +234,7 @@ export function Calendar(props: Props) {
               </li>
             ))}
           </ul>
-          <p className="hint drag-hint">Arrastra una tarea a otro día para cambiar su fecha de entrega.</p>
+          <p className="hint drag-hint">Arrastra una tarea o un evento a otro día para cambiar su fecha.</p>
         </section>
       )}
 
@@ -196,7 +245,11 @@ export function Calendar(props: Props) {
           ))}
           {days.map((d) => {
             const list = byDate[d] ?? [];
+            const evs = evByDate[d] ?? [];
             const n = openCount(d);
+            const shownEv = evs.slice(0, MAX_CHIPS);
+            const shownTasks = list.slice(0, Math.max(0, MAX_CHIPS - shownEv.length));
+            const hidden = evs.length + list.length - shownEv.length - shownTasks.length;
             const outside = d.slice(0, 7) !== anchor.slice(0, 7);
             return (
               <div
@@ -215,12 +268,15 @@ export function Calendar(props: Props) {
                   <span style={{ width: `${(n / maxLoad) * 100}%` }} />
                 </div>
                 <div className="day-chips">
-                  {list.slice(0, MAX_CHIPS).map((t) => (
+                  {shownEv.map((e) => (
+                    <EventChip key={e.id} e={e} />
+                  ))}
+                  {shownTasks.map((t) => (
                     <Chip key={t.id} t={t} />
                   ))}
-                  {list.length > MAX_CHIPS && (
+                  {hidden > 0 && (
                     <Link href={href({ vista: "dia", fecha: d })} className="more">
-                      +{list.length - MAX_CHIPS} más
+                      +{hidden} más
                     </Link>
                   )}
                 </div>
@@ -244,12 +300,19 @@ export function Calendar(props: Props) {
                 <Link href={href({ vista: "dia", fecha: d })} className="wday-head">
                   <span className="wd">{fmtWeekdayShort(d)}</span>
                   <span className="dn">{Number(d.slice(8))}</span>
-                  <span className="wc mono">{n ? `${n} ${n === 1 ? "tarea" : "tareas"}` : "libre"}</span>
+                  <span className="wc mono">
+                    {n || evCount(d)
+                      ? [evCount(d) ? `${evCount(d)} ev.` : "", n ? `${n} ${n === 1 ? "tarea" : "tareas"}` : ""].filter(Boolean).join(" · ")
+                      : "libre"}
+                  </span>
                 </Link>
                 <div className="day-load" aria-hidden="true">
                   <span style={{ width: `${(n / maxLoad) * 100}%` }} />
                 </div>
                 <div className="day-chips">
+                  {(evByDate[d] ?? []).map((e) => (
+                    <EventChip key={e.id} e={e} />
+                  ))}
                   {list.map((t) => (
                     <Chip key={t.id} t={t} />
                   ))}
@@ -262,6 +325,19 @@ export function Calendar(props: Props) {
 
       {view === "dia" && (
         <div className="groups">
+          {(evByDate[anchor] ?? []).length > 0 && (
+            <section className="group">
+              <header>
+                <h2>Eventos {anchor === today ? "de hoy" : `del ${fmtDate(anchor)}`}</h2>
+                <span className="count">{evByDate[anchor].length}</span>
+              </header>
+              <div className="list">
+                {evByDate[anchor].map((e) => (
+                  <EventRow key={e.id} e={e} profiles={profiles} showDate={false} />
+                ))}
+              </div>
+            </section>
+          )}
           {overdue.length > 0 && (
             <section className="group late">
               <header>

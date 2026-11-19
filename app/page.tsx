@@ -4,8 +4,9 @@ import { Header } from "@/components/Header";
 import { FilterBar } from "@/components/FilterBar";
 import { TaskRow } from "@/components/TaskRow";
 import { ensureRecurrences } from "@/lib/recurrence";
+import { ensureEventRecurrences, listEvents } from "@/lib/events";
 import { requireUser, getProfiles, listTasks, getReads, getRecentNotesByOthers, displayName } from "@/lib/data";
-import { daysUntil, dueInfo, fmtLongToday, isoWeek, todayISO } from "@/lib/dates";
+import { daysUntil, dueInfo, fmtLongToday, isoWeek, todayISO, addDays, fmtTimeRange } from "@/lib/dates";
 import { STATUS, isOpen, type Status, type TaskListItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -25,12 +26,13 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
   const q = get("q").toLowerCase();
 
   const { supabase, me } = await requireUser();
-  await ensureRecurrences(supabase);
-  const [profiles, tasks, reads, notes] = await Promise.all([
+  await Promise.all([ensureRecurrences(supabase), ensureEventRecurrences(supabase)]);
+  const [profiles, tasks, reads, notes, soonEvents] = await Promise.all([
     getProfiles(supabase),
     listTasks(supabase),
     getReads(supabase, me.id),
     getRecentNotesByOthers(supabase, me.id),
+    listEvents(supabase, todayISO(), addDays(todayISO(), 1)),
   ]);
   const today = todayISO();
 
@@ -50,7 +52,8 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
     if (!r || n.created_at > r) unreadByTask[n.task_id] = (unreadByTask[n.task_id] ?? 0) + 1;
   }
   const attNotes = tasks.filter((t) => involved(t) && unreadByTask[t.id] && !isNewForMe(t));
-  const attentionCount = attLate.length + attSoon.length + attReview.length + attNew.length + attNotes.length;
+  const attEvents = soonEvents.filter((e) => e.participants.includes(me.id));
+  const attentionCount = attLate.length + attSoon.length + attReview.length + attNew.length + attNotes.length + attEvents.length;
 
   // ---- Filtros ----
   const scope = tasks.filter((t) => {
@@ -127,9 +130,27 @@ export default async function Dashboard({ searchParams }: { searchParams: SP }) 
             <span className="muted mono">{attentionCount}</span>
           </header>
           {attentionCount === 0 ? (
-            <p className="all-clear">Estás al día: nada vencido, nada por aprobar y ninguna novedad en tus tareas.</p>
+            <p className="all-clear">Estás al día: nada vencido, nada por aprobar, sin eventos hoy ni mañana y ninguna novedad en tus tareas.</p>
           ) : (
             <div className="attention-grid">
+              {attEvents.length > 0 && (
+                <div className="att-col events">
+                  <h3><span className="dot" />Eventos hoy y mañana · {attEvents.length}</h3>
+                  <ul>
+                    {attEvents.map((e) => (
+                      <li key={e.id}>
+                        <Link href={`/eventos/${e.id}`}>
+                          <span className="t">{e.title}</span>
+                          <span className="s">
+                            {e.event_date === today ? "Hoy" : "Mañana"} · {fmtTimeRange(e.start_time, e.end_time)}
+                            {e.location ? ` · ${e.location}` : ""}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               {attLate.length > 0 && (
                 <div className="att-col late">
                   <h3><span className="dot" />Vencidas · {attLate.length}</h3>

@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { FilterBar } from "@/components/FilterBar";
 import { Calendar, type View } from "@/components/Calendar";
 import { ensureRecurrences } from "@/lib/recurrence";
+import { ensureEventRecurrences, listEvents } from "@/lib/events";
 import { requireUser, getProfiles, listTasks } from "@/lib/data";
 import { addDays, endOfMonth, isValidISO, startOfMonth, startOfWeek, todayISO, daysUntil } from "@/lib/dates";
 import { isOpen, type TaskListItem } from "@/lib/types";
@@ -33,8 +34,18 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
   }
 
   const { supabase, me } = await requireUser();
-  await ensureRecurrences(supabase);
-  const [profiles, all] = await Promise.all([getProfiles(supabase), listTasks(supabase)]);
+  await Promise.all([ensureRecurrences(supabase), ensureEventRecurrences(supabase)]);
+  const [profiles, all, allEvents] = await Promise.all([getProfiles(supabase), listTasks(supabase), listEvents(supabase, from, to)]);
+  // Eventos: mismo filtro de personas; con filtro de proyecto no se muestran (los eventos no tienen proyecto)
+  const events = proyecto
+    ? []
+    : allEvents.filter((e) => {
+        const mineEv = e.participants.includes(me.id);
+        if (who === "mias" && !mineEv) return false;
+        if (who === "compartidas" && e.participants.length < 2) return false;
+        if (who === "otros" && mineEv) return false;
+        return true;
+      });
 
   const mine = (t: TaskListItem) => t.assignees.includes(me.id);
   const filtered = all.filter((t) => {
@@ -68,6 +79,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: SP 
           from={from}
           to={to}
           tasks={inRange}
+          events={events}
           overdue={overdue}
           noDateCount={noDate}
           profiles={profiles}

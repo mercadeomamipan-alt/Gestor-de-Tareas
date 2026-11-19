@@ -109,6 +109,8 @@ export async function createTask(_prev: FormState, fd: FormData): Promise<FormSt
       start_date: f.start_date,
       due_date: f.due_date,
       assigned_by: f.assigned_by || me.id,
+      // Solo se envía si la tarea viene de un evento (así crear tareas funciona aunque falte la actualización SQL de eventos)
+      ...(/^[0-9a-f-]{36}$/i.test(str(fd, "event_id")) ? { event_id: str(fd, "event_id") } : {}),
       created_by: me.id,
       updated_by: me.id,
     })
@@ -146,6 +148,7 @@ export async function createTask(_prev: FormState, fd: FormData): Promise<FormSt
   }
 
   revalidatePath("/");
+  if (task.event_id) revalidatePath(`/eventos/${task.event_id}`);
   redirect(`/tareas/${task.id}`);
 }
 

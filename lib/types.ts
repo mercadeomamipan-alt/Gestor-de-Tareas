@@ -47,6 +47,7 @@ export type Task = {
   created_at: string;
   updated_by: string | null;
   updated_at: string;
+  event_id?: string | null;
 };
 
 export type Requirement = {
@@ -92,3 +93,33 @@ export type TaskListItem = Task & {
   req_done: number;
   note_count: number;
 };
+
+// ---------- Eventos y reuniones ----------
+export const EVENT_KIND = {
+  reunion: "Reunión",
+  evento: "Evento",
+  cita: "Cita",
+  capacitacion: "Capacitación",
+  otro: "Otro",
+} as const;
+export type EventKind = keyof typeof EVENT_KIND;
+
+export type CalEvent = {
+  id: string;
+  title: string;
+  kind: EventKind;
+  event_date: string;
+  start_time: string | null; // "HH:MM:SS"
+  end_time: string | null;
+  location: string;
+  description: string;
+  notes: string;
+  recurrence: Recurrence;
+  recurrence_from: string | null;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+export type EventListItem = CalEvent & { participants: string[]; task_count: number };

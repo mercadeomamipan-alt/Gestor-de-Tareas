@@ -8,6 +8,7 @@ export function NavTabs() {
   const tabs = [
     { href: "/", label: "Tareas", active: path === "/" || path.startsWith("/tareas") },
     { href: "/calendario", label: "Calendario", active: path.startsWith("/calendario") },
+    { href: "/eventos", label: "Eventos", active: path.startsWith("/eventos") },
   ];
   return (
     <nav className="appbar-tabs" aria-label="Secciones">
